@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">EventFinder</string>
+    <string name="title_activity_landing">LandingActivity</string>
+</resources>
