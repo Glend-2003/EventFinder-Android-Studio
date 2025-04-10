@@ -1,10 +1,14 @@
 package com.moviles.eventfinder
 
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -50,6 +55,8 @@ import com.moviles.eventfinder.viewmodel.EventViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,6 +87,7 @@ fun EventScreen(viewModel: EventViewModel) {
     val events by viewModel.events.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
     var selectedEvent by remember { mutableStateOf<Event?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         Log.i("Activity", "Coming here???")
@@ -92,7 +100,6 @@ fun EventScreen(viewModel: EventViewModel) {
                 title = { Text("Events") }
             )
         },
-
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 selectedEvent = null
@@ -102,32 +109,25 @@ fun EventScreen(viewModel: EventViewModel) {
                 Icon(Icons.Default.Add, contentDescription = "Add Event")
             }
         }
-
-
-
-
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            // Button with padding
             Button(
                 modifier = Modifier
-                    .padding(16.dp) // Add padding around the button
+                    .padding(16.dp)
                     .fillMaxWidth(),
                 onClick = { viewModel.fetchEvents() }
             ) {
                 Text("Refresh Events")
             }
 
-            // Spacer to ensure some space between button and the list
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Event List with remaining space
             EventList(events,
                 onEdit = { event ->
-                selectedEvent = event
-                showDialog = true
-            }, onDelete =
-               { event -> viewModel.deleteEvent(event.id) }
+                    selectedEvent = event
+                    showDialog = true
+                }, onDelete =
+                { event -> viewModel.deleteEvent(event.id) }
             )
         }
     }
@@ -136,13 +136,17 @@ fun EventScreen(viewModel: EventViewModel) {
         EventDialog(
             event = selectedEvent,
             onDismiss = { showDialog = false },
-            onSave = { event ->
-                if (event.id == null) viewModel.addEvent(event) else viewModel.updateEvent(event)
+            onSave = { event, imageUri ->
+                if (event.id == null) {
+                    viewModel.addEvent(event, context, imageUri)
+                } else {
+                    viewModel.updateEvent(event)
+                }
                 showDialog = false
-            }
+            },
+            context = context
         )
     }
-
 }
 
 @Composable
@@ -178,62 +182,139 @@ fun EventItem(event: Event, onEdit: (Event) -> Unit, onDelete: (Event) -> Unit) 
 }
 
 @Composable
-fun EventDialog(event: Event?, onDismiss: () -> Unit, onSave: (Event) -> Unit) {
+fun EventDialog(
+                event: Event?,
+                onDismiss: () -> Unit,
+                onSave: (Event, Uri?) -> Unit,
+                context: android.content.Context
+) {
     var name by remember { mutableStateOf(event?.name ?: "") }
     var description by remember { mutableStateOf(event?.description ?: "") }
     var location by remember { mutableStateOf(event?.location ?: "") }
-    var selectedDate by remember { mutableStateOf<Long?>(null) }
+    var selectedDate by remember { mutableStateOf<Long?>(event?.date?.let {
+        try {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(it)?.time
+        } catch (e: Exception) {
+            null
+        }
+    }) }
     var showDatePicker by remember { mutableStateOf(false) }
-
+    var imageUri by remember { mutableStateOf<Uri?>(event?.image?.let { Uri.parse(it) }) }
+    var showImagePicker by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (event == null) "Add Event" else "Edit Event") },
         text = {
-            Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
-                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") })
-                OutlinedTextField(value = location, onValueChange = { location = it }, label = { Text("Location") })
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = location,
+                    onValueChange = { location = it },
+                    label = { Text("Location") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Sección de fecha
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Mostrar fecha seleccionada
                 if (selectedDate != null) {
-                    val date = Date(selectedDate!!)
-                    val formattedDate = selectedDate?.let {
-                        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it))
-                    } ?: ""
-
+                    val formattedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        .format(Date(selectedDate!!))
                     Text("Selected date: $formattedDate")
                 } else {
                     Text("No date selected")
                 }
-                // Botón para abrir el DatePickers
-                Button(onClick = { showDatePicker = true }) {
+
+                // Botón para fecha
+                Button(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
                     Text("Select Date")
                 }
-                //Boton para abrir un imagePicker
 
+                // Sección de imagen
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Imagen del evento:")
 
+                // Mostrar info de imagen seleccionada
+                if (imageUri != null) {
+                    val uri = imageUri
+                    val fileName = uri?.lastPathSegment?.substringAfterLast('/') ?: "Imagen seleccionada"
+                    Text("Imagen seleccionada: $fileName")
+                } else {
+                    Text("No hay imagen seleccionada")
+                }
 
+                // Botón para imagen
+                Button(
+                    onClick = { showImagePicker = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    Text("Select Image")
+                }
             }
         },
         confirmButton = {
             Button(onClick = {
+                // Verificar campos requeridos
+                if (name.isBlank() || location.isBlank() || description.isBlank()) {
+                    Log.e("EventDialog", "Campos requeridos vacíos")
+                    return@Button
+                }
+
                 val formattedDate = selectedDate?.let {
                     SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it))
                 } ?: ""
 
-                onSave(Event(event?.id, name, formattedDate, location, description, null))
-            }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                Text("Save")
-            }
-        }
-        ,
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel", color = MaterialTheme.colorScheme.secondary)
+                val newEvent = Event(
+                    id = event?.id,
+                    name = name.trim(),
+                    date = formattedDate,
+                    location = location.trim(),
+                    description = description.trim(),
+                    image = null // El image no lo usaremos en este objeto, lo pasaremos por separado
+                )
+
+                onSave(newEvent, imageUri)
+            }) {
+                Text("Guardar")
             }
         },
-
-
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
     )
+
+    // Modales
     if (showDatePicker) {
         DatePickerModal(
             onDateSelected = {
@@ -243,7 +324,17 @@ fun EventDialog(event: Event?, onDismiss: () -> Unit, onSave: (Event) -> Unit) {
             onDismiss = { showDatePicker = false }
         )
     }
-}
+
+    if (showImagePicker) {
+        ImagePickerModal(
+            onImageSelected = { uri ->
+                imageUri = uri
+                showImagePicker = false
+            },
+            onDismiss = { showImagePicker = false }
+        )
+    }
+   }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -272,3 +363,31 @@ fun DatePickerModal(
         DatePicker(state = datePickerState)
     }
 }
+
+@Composable
+fun ImagePickerModal(
+    onImageSelected: (Uri?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val pickMedia = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            Log.d("PhotoPicker", "Selected URI: $uri")
+            onImageSelected(uri)
+        } else {
+            Log.d("PhotoPicker", "No media selected")
+            onImageSelected(null)
+        }
+    }
+
+    // Lanzamos el picker inmediatamente
+    LaunchedEffect(Unit) {
+        pickMedia.launch(
+            PickVisualMediaRequest.Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                .build()
+        )
+    }
+}
+
