@@ -55,7 +55,8 @@ import com.moviles.eventfinder.viewmodel.EventViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 
 
 class MainActivity : ComponentActivity() {
@@ -263,9 +264,14 @@ fun EventDialog(
 
                 // Mostrar info de imagen seleccionada
                 if (imageUri != null) {
-                    val uri = imageUri
-                    val fileName = uri?.lastPathSegment?.substringAfterLast('/') ?: "Imagen seleccionada"
-                    Text("Imagen seleccionada: $fileName")
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = "Imagen seleccionada",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp),
+                        contentScale = ContentScale.Crop
+                    )
                 } else {
                     Text("No hay imagen seleccionada")
                 }
