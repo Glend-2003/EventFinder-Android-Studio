@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "30407510791",
+    "project_id": "event-finder-d95db",
+    "storage_bucket": "event-finder-d95db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:30407510791:android:09da704e879894cd2d53a2",
+        "android_client_info": {
+          "package_name": "com.moviles.eventfinder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKL2pBaaXvDfkEWW-5Ldb0dwsA2Jjcouw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
