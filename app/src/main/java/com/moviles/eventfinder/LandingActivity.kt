@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -46,6 +47,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.google.firebase.messaging.FirebaseMessaging
 import com.moviles.eventfinder.common.Constants.IMAGES_BASE_URL
 import com.moviles.eventfinder.models.Event
 import com.moviles.eventfinder.ui.theme.EventFinderTheme
@@ -56,6 +58,7 @@ class LandingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel(this)
+        subscribeToTopic()
         enableEdgeToEdge()
         setContent {
             EventFinderTheme {
@@ -181,4 +184,15 @@ fun createNotificationChannel(context: Context) {
             context.getSystemService(NotificationManager::class.java)
         notificationManager?.createNotificationChannel(channel)
     }
+}
+
+fun subscribeToTopic() {
+    FirebaseMessaging.getInstance().subscribeToTopic("event_notifications")
+        .addOnCompleteListener { task ->
+            var msg = "Subscription successful"
+            if (!task.isSuccessful) {
+                msg = "Subscription failed"
+            }
+            Log.d("FCM", msg)
+        }
 }
