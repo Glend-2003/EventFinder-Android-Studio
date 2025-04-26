@@ -5,3 +5,17 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     id("com.google.gms.google-services") version "4.4.2" apply false
 }
+
+buildscript {
+    // En Kotlin DSL se definen extra properties así:
+
+    val kotlin_version by extra("1.9.22")
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${project.extra["kotlin_version"]}")
+    }
+}

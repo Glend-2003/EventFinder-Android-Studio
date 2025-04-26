@@ -1,8 +1,11 @@
+
 plugins {
+
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
+    id("kotlin-kapt")
 }
 
 android {
@@ -17,6 +20,17 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/schemas",
+                    "room.incremental" to "true"
+                )
+            }
+        }
+
+
     }
 
     buildTypes {
@@ -38,9 +52,15 @@ android {
     buildFeatures {
         compose = true
     }
+
 }
 
+kapt {
+    correctErrorTypes = true
+}
 dependencies {
+
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -74,4 +94,17 @@ dependencies {
     implementation(libs.firebase.bom)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.analytics)
+
+    //implementation(libs.androidx.room.runtime)
+
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    // OkHttp con una sola versión definida
+    //implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    //implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
 }
